@@ -31,15 +31,9 @@ public class CompressedSampleData implements SampleData {
 				int bufferEnd = count * numChannels + channel;
 				while( bufferIdx < bufferEnd ) {
 					int in = inputBuf[ bufferIdx ] - out;
-					if( in < 0 ) {
-						in = ( int ) ( Math.sqrt( in / -65536d ) * -127 );
-						outputBuf[ bufferIdx ] = ( byte ) in;
-						out -= in * in * 4;
-					} else {
-						in = ( int ) ( Math.sqrt( in / 65536d ) * 127 );
-						outputBuf[ bufferIdx ] = ( byte ) in;
-						out += in * in * 4;
-					}
+					in = ( int ) ( Math.cbrt( in / 65536d ) * 127 );
+					outputBuf[ bufferIdx ] = ( byte ) in;
+					out += ( in * in * in ) >> 5;
 					bufferIdx += numChannels;					
 				}
 				channelState[ channel ] = out;
@@ -86,11 +80,7 @@ public class CompressedSampleData implements SampleData {
 			int outputIdx = offset * numChannels + channel;
 			while( inputIdx < inputEnd ) {
 				int in = inputBuf[ inputIdx ];
-				if( in < 0 ) {
-					out -= in * in * 4;
-				} else {
-					out += in * in * 4;
-				}
+				out += ( in * in * in ) >> 5;
 				outputBuf[ outputIdx ] = ( short ) out;
 				outputIdx += numChannels;
 				inputIdx += numChannels;
