@@ -5,36 +5,44 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
 
-/* 8-Bit Companding Codec. */
+/* 8-Bit Differential Companding Codec. */
 public class CompressedSampleData implements SampleData {
-	private static final String VERSION = "20140125 (c) mumart@gmail.com";
+	private static final String VERSION = "20140127 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 
 	private byte[] inputBuf;
+	private int[] channelState;
 	private InputStream inputStream;
 	private int numChannels, sampleRate, samplesRemaining;
 
 	/* Encode the contents of specified SampleData and write to the specified OutputStream. */
 	public static void encode( SampleData sampleData, OutputStream outputStream ) throws Exception {
 		int numChannels = sampleData.getNumChannels();
+		int[] channelState = new int[ numChannels ];
 		short[] inputBuf = new short[ BUF_SAMPLES * numChannels ];
 		byte[] outputBuf = new byte[ BUF_SAMPLES * numChannels ];
 		int count = 0;
 		while( sampleData.getSamplesRemaining() > 0 ) {
 			count = sampleData.getSamples( inputBuf, 0, BUF_SAMPLES );
-			for( int channel = 0; channel < numChannels; channel++ ) {	
+			for( int channel = 0; channel < numChannels; channel++ ) {
+				int out = channelState[ channel ];
 				int bufferIdx = channel;
 				int bufferEnd = count * numChannels + channel;
 				while( bufferIdx < bufferEnd ) {
-					int in = inputBuf[ bufferIdx ];
+					int in = inputBuf[ bufferIdx ] - out;
 					if( in < 0 ) {
-						outputBuf[ bufferIdx ] = ( byte ) ( Math.sqrt( in / -32768d ) * -127 );
+						in = ( int ) ( Math.sqrt( in / -65536d ) * -127 );
+						outputBuf[ bufferIdx ] = ( byte ) in;
+						out -= in * in * 4;
 					} else {
-						outputBuf[ bufferIdx ] = ( byte ) ( Math.sqrt( in / 32768d ) * 127 );
+						in = ( int ) ( Math.sqrt( in / 65536d ) * 127 );
+						outputBuf[ bufferIdx ] = ( byte ) in;
+						out += in * in * 4;
 					}
 					bufferIdx += numChannels;					
 				}
+				channelState[ channel ] = out;
 			}
 			outputStream.write( outputBuf, 0, count * numChannels );
 		}
@@ -47,6 +55,7 @@ public class CompressedSampleData implements SampleData {
 		this.sampleRate = sampleRate;
 		this.samplesRemaining = numSamples;
 		inputBuf = new byte[ BUF_SAMPLES * numChannels ];
+		channelState = new int[ numChannels ];
 	}
 
 	public int getNumChannels() {
@@ -71,19 +80,22 @@ public class CompressedSampleData implements SampleData {
 		}
 		count = readFully( inputStream, inputBuf, count * numChannels ) / numChannels;
 		for( int channel = 0; channel < numChannels; channel++ ) {
+			int out = channelState[ channel ];
 			int inputIdx = channel;
 			int inputEnd = count * numChannels + channel;
 			int outputIdx = offset * numChannels + channel;
 			while( inputIdx < inputEnd ) {
-				int a = inputBuf[ inputIdx ];
-				if( a < 0 ) {
-					outputBuf[ outputIdx ] = ( short ) ( a * -a * 2 );
+				int in = inputBuf[ inputIdx ];
+				if( in < 0 ) {
+					out -= in * in * 4;
 				} else {
-					outputBuf[ outputIdx ] = ( short ) ( a * a * 2 );
+					out += in * in * 4;
 				}
+				outputBuf[ outputIdx ] = ( short ) out;
 				outputIdx += numChannels;
 				inputIdx += numChannels;
 			}
+			channelState[ channel ] = out;
 		}
 		samplesRemaining -= count;
 		return count;
