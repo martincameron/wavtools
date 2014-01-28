@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /* 8-Bit Differential Companding Codec. */
 public class CompressedSampleData implements SampleData {
-	private static final String VERSION = "20140127 (c) mumart@gmail.com";
+	private static final String VERSION = "20140128 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 
@@ -15,6 +15,18 @@ public class CompressedSampleData implements SampleData {
 	private int[] channelState;
 	private InputStream inputStream;
 	private int numChannels, sampleRate, samplesRemaining;
+
+	private static int cbrt( int x ) {
+		// Approximate integer cube-root of x.
+		int y = ( x >> 31 ) ^ 0x7F;
+		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		return y;
+	}
 
 	/* Encode the contents of specified SampleData and write to the specified OutputStream. */
 	public static void encode( SampleData sampleData, OutputStream outputStream ) throws Exception {
@@ -30,8 +42,7 @@ public class CompressedSampleData implements SampleData {
 				int bufferIdx = channel;
 				int bufferEnd = count * numChannels + channel;
 				while( bufferIdx < bufferEnd ) {
-					int in = inputBuf[ bufferIdx ] - out;
-					in = ( int ) ( Math.cbrt( in / 65536d ) * 127 );
+					int in = cbrt( ( inputBuf[ bufferIdx ] - out ) << 5 );
 					outputBuf[ bufferIdx ] = ( byte ) in;
 					out += ( in * in * in ) >> 5;
 					bufferIdx += numChannels;					
