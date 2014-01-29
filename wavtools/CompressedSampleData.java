@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /* 8-Bit Differential Companding Codec. */
 public class CompressedSampleData implements SampleData {
-	private static final String VERSION = "20140128 (c) mumart@gmail.com";
+	private static final String VERSION = "20140129 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 
@@ -17,10 +17,8 @@ public class CompressedSampleData implements SampleData {
 	private int numChannels, sampleRate, samplesRemaining;
 
 	private static int cbrt( int x ) {
-		// Approximate integer cube-root of x.
-		int y = ( x >> 31 ) ^ 0x7F;
-		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
-		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		// Approximate cube-root of x. Halley's Method.
+		int y = ( x >> 31 ) ^ 0xF;
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
