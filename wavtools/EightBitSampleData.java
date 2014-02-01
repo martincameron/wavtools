@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /* Convert to 8-bit signed PCM with noise shaping. */
 public class EightBitSampleData implements SampleData {
-	private static final String VERSION = "20140125 (c) mumart@gmail.com";
+	private static final String VERSION = "20140201 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 
@@ -28,21 +28,25 @@ public class EightBitSampleData implements SampleData {
 				int bufferIdx = channel;
 				int bufferEnd = count * numChannels + channel;
 				while( bufferIdx < bufferEnd ) {
-					in = inputBuf[ bufferIdx ];
+					// Convert to unsigned for proper integer rounding.
+					in = inputBuf[ bufferIdx ] + 32768;
 					// TPDF dither.
 					rand = ( rand * 65 + 17 ) & 0x7FFFFFFF;
 					int dither = rand >> 25;
 					rand = ( rand * 65 + 17 ) & 0x7FFFFFFF;
 					dither -= rand >> 25;
-					// "F-weighted" 3-tap noise shaping. Seems to be the best >32khz.
+					// "F-weighted" 3-tap noise shaping. Works well around 32khz.
 					in = in - ( s1 * 13 -s2 * 8 + s3 ) / 8 + dither;
 					s3 = s2;
 					s2 = s1;
-					out = ( int ) Math.round( in / 256d );
-					if( out < -128 ) out = -128;
-					if( out > 127 ) out = 127;
+					// Rounding and quantization.
+					out = ( in + ( in & 0x80 ) ) >> 8;
+					// Clipping.
+					if( out < 0 ) out = 0;
+					if( out > 255 ) out = 255;
+					// Feedback.
 					s1 = ( out << 8 ) - in;
-					outputBuf[ bufferIdx ] = ( byte ) out;
+					outputBuf[ bufferIdx ] = ( byte ) ( out - 128 );
 					bufferIdx += numChannels;					
 				}
 			}
