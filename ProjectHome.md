@@ -1,0 +1,1 @@
+An easy to use WAV reader and writer for Java, which supports most of the common PCM bit depth and channel combinations. There's also a simple 4-bit ADPCM codec based on IMA-ADPCM with an improved predictor.
