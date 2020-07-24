@@ -11,7 +11,7 @@ public class NoiseReduction implements SampleData {
 	private static final float F_MIN = ( float ) ( 2.0 * Math.PI * 0.01 / OVERSAMPLE );
 	private static final float F_MAX = ( float ) ( 2.0 * Math.PI * 0.5 / OVERSAMPLE );
 
-	private static final float ATTACK = ( F_MAX - F_MIN ) / 32;
+	private static final float ATTACK = ( F_MAX - F_MIN ) / 64;
 	private static final float RELEASE = ( F_MAX - F_MIN ) / 4096;
 
 	private SampleData input;
