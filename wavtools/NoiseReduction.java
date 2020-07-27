@@ -18,7 +18,7 @@ public class NoiseReduction implements SampleData {
 
 	private float[] s0, s1;
 	
-	private float trigger, freq = F_MIN;
+	private float floor, trigger, freq = F_MIN;
 
 	/**
 		Constructor.
@@ -27,7 +27,8 @@ public class NoiseReduction implements SampleData {
 	*/
 	public NoiseReduction( SampleData input, int dynamicRange ) {
 		this.input = input;
-		trigger = ( float ) ( 32768 * Math.pow( 10, dynamicRange / -20.0 ) );
+		floor = ( float ) ( 32768 * Math.pow( 10, dynamicRange / -20.0 ) );
+		trigger = ( float ) ( 32768 * Math.pow( 10, ( dynamicRange - 3 ) / -20.0 ) );
 		s0 = new float[ input.getNumChannels() ];
 		s1 = new float[ input.getNumChannels() ];
 	}
@@ -65,8 +66,8 @@ public class NoiseReduction implements SampleData {
 					ctrl = -hp;
 				}
 			}
-			if( ctrl >= trigger ) {
-				freq += ATTACK;
+			if( ctrl >= floor ) {
+				freq += ( ctrl >= trigger ) ? ATTACK : RELEASE;
 				if( freq > F_MAX ) {
 					freq = F_MAX;
 				}
