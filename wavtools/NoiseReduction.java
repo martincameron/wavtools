@@ -2,8 +2,8 @@
 package wavtools;
 
 /**
-	An analogue-style noise-reduction algorithm,
-	using a variable 12db/octave low-pass filter based on DNR.
+	An analogue-style noise-reduction algorithm based on DNR,
+	using a variable 12db/octave low-pass filter.
 */
 public class NoiseReduction implements SampleData {
 	private static final int OVERSAMPLE = 8;
@@ -11,24 +11,23 @@ public class NoiseReduction implements SampleData {
 	private static final float F_MIN = ( float ) ( 2.0 * Math.PI * 0.01 / OVERSAMPLE );
 	private static final float F_MAX = ( float ) ( 2.0 * Math.PI * 0.5 / OVERSAMPLE );
 
-	private static final float ATTACK = ( F_MAX - F_MIN ) / 64;
-	private static final float RELEASE = ( F_MAX - F_MIN ) / 4096;
+	private static final float ATTACK = ( float ) ( Math.pow( 2, 1.0 / 16 ) );
+	private static final float RELEASE = ( float ) ( Math.pow( 2, -1.0 / 4096 ) );
 
 	private SampleData input;
 
 	private float[] s0, s1;
 	
-	private float floor, trigger, freq = F_MIN;
+	private float floor, freq = F_MIN;
 
 	/**
 		Constructor.
 		@param input the input audio.
-		@param dynamicRange the dynamic range in db (typically 56, lower values increase noise reduction).
+		@param dynamicRange the dynamic range in db (typically 54, lower values increase noise reduction).
 	*/
 	public NoiseReduction( SampleData input, int dynamicRange ) {
 		this.input = input;
 		floor = ( float ) ( 32768 * Math.pow( 10, dynamicRange / -20.0 ) );
-		trigger = ( float ) ( 32768 * Math.pow( 10, ( dynamicRange - 3 ) / -20.0 ) );
 		s0 = new float[ input.getNumChannels() ];
 		s1 = new float[ input.getNumChannels() ];
 	}
@@ -67,12 +66,12 @@ public class NoiseReduction implements SampleData {
 				}
 			}
 			if( ctrl >= floor ) {
-				freq += ( ctrl >= trigger ) ? ATTACK : RELEASE;
+				freq *= ATTACK;
 				if( freq > F_MAX ) {
 					freq = F_MAX;
 				}
 			} else {
-				freq -= RELEASE;
+				freq *= RELEASE;
 				if( freq < F_MIN ) {
 					freq = F_MIN;
 				}
@@ -88,7 +87,7 @@ public class NoiseReduction implements SampleData {
 			try {
 				java.io.OutputStream outputStream = new java.io.FileOutputStream( args[ 1 ] );
 				try {
-					WavSampleData.writeWav( new NoiseReduction( new WavSampleData( inputStream ), 56 ), outputStream );
+					WavSampleData.writeWav( new NoiseReduction( new WavSampleData( inputStream ), 54 ), outputStream );
 				}
 				finally {
 					outputStream.close();
