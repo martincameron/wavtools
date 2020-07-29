@@ -61,7 +61,13 @@ public class NoiseReduction implements SampleData {
 					s0[ chn ] = freq * hp + s0[ chn ];
 					s1[ chn ] = lp;
 				}
-				buffer[ idx ] = ( short ) lp;
+				if( lp > 32767 ) {
+					buffer[ idx ] = 32767;
+				} else if( lp < -32768 ) {
+					buffer[ idx ] = -32768;
+				} else {
+					buffer[ idx ] = ( short ) lp;
+				}
 				if( hp > ctrl ) {
 					ctrl = hp;
 				} else if( -hp > ctrl ) {
