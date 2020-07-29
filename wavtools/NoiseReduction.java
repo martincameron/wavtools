@@ -8,28 +8,31 @@ package wavtools;
 public class NoiseReduction implements SampleData {
 	private static final int OVERSAMPLE = 8;
 
-	private static final float F_MIN = ( float ) ( 2.0 * Math.PI * 0.01 / OVERSAMPLE );
-	private static final float F_MAX = ( float ) ( 2.0 * Math.PI * 0.5 / OVERSAMPLE );
-
-	private static final float ATTACK = ( float ) ( Math.pow( 2, 1.0 / 16 ) );
-	private static final float RELEASE = ( float ) ( Math.pow( 2, -1.0 / 4096 ) );
+	private static final int FREQ_MIN_HZ = 500;
+	private static final float FREQ_MAX = ( float ) ( 2.0 * Math.PI * 0.5 / OVERSAMPLE );
+	
+	private static final float ATTACK_MS_PER_OCTAVE = 0.5f;
+	private static final float RELEASE_MS_PER_OCTAVE = 50f;
 
 	private SampleData input;
 
 	private float[] s0, s1;
 	
-	private float floor, freq = F_MIN;
+	private float floor, attack, release, freqMin, freq;
 
 	/**
 		Constructor.
 		@param input the input audio.
-		@param dynamicRange the dynamic range in db (typically 54, lower values increase noise reduction).
+		@param dynamicRange the dynamic range in db (typically 48, lower values increase noise reduction).
 	*/
 	public NoiseReduction( SampleData input, int dynamicRange ) {
 		this.input = input;
-		floor = ( float ) ( 32768 * Math.pow( 10, dynamicRange / -20.0 ) );
 		s0 = new float[ input.getNumChannels() ];
 		s1 = new float[ input.getNumChannels() ];
+		floor = ( float ) ( 32768 * Math.pow( 10, dynamicRange / -20.0 ) );
+		attack = ( float ) Math.pow( 2, 1000 / ( input.getSampleRate() * ATTACK_MS_PER_OCTAVE ) );
+		release = ( float ) Math.pow( 2, -1000 / ( input.getSampleRate() * RELEASE_MS_PER_OCTAVE ) );
+		freqMin = freq = ( float ) ( 2.0 * Math.PI * FREQ_MIN_HZ / ( input.getSampleRate() * OVERSAMPLE ) );
 	}
 
 	public int getNumChannels() {
@@ -66,14 +69,14 @@ public class NoiseReduction implements SampleData {
 				}
 			}
 			if( ctrl >= floor ) {
-				freq *= ATTACK;
-				if( freq > F_MAX ) {
-					freq = F_MAX;
+				freq *= attack;
+				if( freq > FREQ_MAX ) {
+					freq = FREQ_MAX;
 				}
 			} else {
-				freq *= RELEASE;
-				if( freq < F_MIN ) {
-					freq = F_MIN;
+				freq *= release;
+				if( freq < freqMin ) {
+					freq = freqMin;
 				}
 			}
 			offset++;
@@ -82,12 +85,24 @@ public class NoiseReduction implements SampleData {
 	}
 	
 	public static void main( String[] args ) throws Exception {
-		if( args.length == 2 ) {
-			java.io.InputStream inputStream = new java.io.FileInputStream( args[ 0 ] );
+		String input = null, output = null;
+		int db = 48, idx = 0;
+		while( idx < args.length ) {
+			String arg = args[ idx++ ];
+			if( "-db".equals( arg ) ) {
+				db = Integer.parseInt( args[ idx++ ] );
+			} else if( input == null ) {
+				input = arg;
+			} else if( output == null ) {
+				output = arg;
+			}
+		}
+		if( input != null && output != null ) {
+			java.io.InputStream inputStream = new java.io.FileInputStream( input );
 			try {
-				java.io.OutputStream outputStream = new java.io.FileOutputStream( args[ 1 ] );
+				java.io.OutputStream outputStream = new java.io.FileOutputStream( output );
 				try {
-					WavSampleData.writeWav( new NoiseReduction( new WavSampleData( inputStream ), 54 ), outputStream );
+					WavSampleData.writeWav( new NoiseReduction( new WavSampleData( inputStream ), db ), outputStream );
 				}
 				finally {
 					outputStream.close();
@@ -97,7 +112,7 @@ public class NoiseReduction implements SampleData {
 				inputStream.close();
 			}
 		} else {
-			System.err.println( "Usage: NoiseReduction input.wav output.wav" );
+			System.err.println( "Usage: NoiseReduction [-db 48] input.wav output.wav" );
 		}
 	}
 }
