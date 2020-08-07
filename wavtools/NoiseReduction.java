@@ -64,7 +64,7 @@ public class NoiseReduction implements SampleData {
 					buffer[ idx ] = ( short ) out;
 				}
 			}
-			hpY = ( hpY + ctrl - hpX ) / ( fc + 1 );
+			hpY = ( hpY + ctrl - hpX ) / ( fc * 0.5f + 1 );
 			hpX = ctrl;
 			if( hpY > floor || -hpY > floor ) {
 				fc *= attack;
