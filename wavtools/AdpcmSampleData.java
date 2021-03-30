@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /* IMA-style 4-bit ADPCM Codec. */
 public class AdpcmSampleData implements SampleData {
-	private static final String VERSION = "20130330 (c) mumart@gmail.com";
+	private static final String VERSION = "20210330 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 	private static final int FP_SHIFT = 8, FP_ONE = 1 << FP_SHIFT;
@@ -19,7 +19,7 @@ public class AdpcmSampleData implements SampleData {
 
 	private static final int[] BIAS = {
 		// Used to bias the prediction based on the previous encoded value.
-		-6,-5,-4,-3,-2,-1,-1,1,-1,1,1,2,3,4,5,6
+		-7,-6,-5,-4,-3,-2,-1,0,0,1,2,3,4,5,6,7
 	};
 
 	private byte[] inputBuf;
