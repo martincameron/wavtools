@@ -8,16 +8,26 @@ import java.io.IOException;
 /*
 	Dynamic-quantizer which reduces the
 	precision of high-amplitude portions of the signal.
-	Can be used with PCM-compression algorithms such as FLAC, to reduce
-	the file size by as much as half without significant loss of quality.
+	Can be used with PCM compression algorithms such as FLAC, to reduce
+	the file-size by as much as half without significant loss of quality.
 */
 public class QuantizedSampleData implements SampleData {
-	private static final String VERSION = "20210331 (c) mumart@gmail.com";
+	private static final String VERSION = "20210401 (c) mumart@gmail.com";
 
 	private SampleData input;
+	private int precision;
+
+	/* Precision specified in bits per sample in the range 3 to 15. */
+	public QuantizedSampleData( SampleData sampleData, int precision ) {
+		if( precision < 3 || precision > 15 ) {
+			throw new IllegalArgumentException( "Invalid precision parameter." );
+		}
+		input = sampleData;
+		this.precision = precision;
+	}
 
 	public QuantizedSampleData( SampleData sampleData ) {
-		input = sampleData;
+		this( sampleData, 8 );
 	}
 
 	public int getNumChannels() {
@@ -58,12 +68,12 @@ public class QuantizedSampleData implements SampleData {
 					bits++;
 					variance >>= 1;
 				}
-				if( bits > 7 ) {
+				if( bits > precision ) {
 					/* Quantize and round. */
 					for( int idx = offset, endIdx = offset + samples; idx < endIdx; idx++ ) {
-						int amp = ( outputBuf[ idx * channels + channel ] + 32768 ) >> ( bits - 8 );
+						int amp = ( outputBuf[ idx * channels + channel ] + 32768 ) >> ( bits - precision - 1 );
 						amp = ( amp >> 1 ) + ( amp & 1 );
-						outputBuf[ idx * channels + channel ] = ( short ) ( ( amp << ( bits - 7 ) ) - 32768 );
+						outputBuf[ idx * channels + channel ] = ( short ) ( ( amp << ( bits - precision ) ) - 32768 );
 					}
 				}
 			}
