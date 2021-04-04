@@ -7,12 +7,12 @@ import java.io.IOException;
 
 /*
 	Dynamic-quantizer which reduces the
-	precision of high-amplitude portions of the signal.
+	precision of unpredictable portions of the signal.
 	Can be used with PCM compression algorithms such as FLAC, to reduce
 	the file-size by as much as half without significant loss of quality.
 */
 public class QuantizedSampleData implements SampleData {
-	private static final String VERSION = "20210401 (c) mumart@gmail.com";
+	private static final String VERSION = "20210404 (c) mumart@gmail.com";
 
 	private SampleData input;
 	private int precision;
@@ -27,7 +27,7 @@ public class QuantizedSampleData implements SampleData {
 	}
 
 	public QuantizedSampleData( SampleData sampleData ) {
-		this( sampleData, 8 );
+		this( sampleData, 5 );
 	}
 
 	public int getNumChannels() {
@@ -51,29 +51,29 @@ public class QuantizedSampleData implements SampleData {
 			/* Quantize chunks of at most 64 samples. */
 			int samples = input.getSamples( outputBuf, offset, 64 );
 			for( int channel = 0, channels = input.getNumChannels(); channel < channels; channel++ ) {
-				int min = 0, max = 0;
-				for( int idx = offset, endIdx = offset + samples; idx < endIdx; idx++ ) {
-					int amp = outputBuf[ idx * channels + channel ];
-					if( amp < min ) {
-						min = amp;
+				/* Estimate the unpredictability of the signal. */
+				int max = 0;
+				for( int idx = offset + 1, endIdx = offset + samples; idx < endIdx; idx++ ) {
+					int da = outputBuf[ idx * channels + channel ] - outputBuf[ ( idx - 1 ) * channels + channel ];
+					if( da < 0 ) {
+						da = -da;
 					}
-					if( amp > max ) {
-						max = amp;
+					if( da > max ) {
+						max = da;
 					}
 				}
-				/* Calculate the dynamic-range of this chunk. */
-				int bits = 0;
-				int variance = max - min;
-				while( variance > 0 ) {
+				/* Determine the number of bits to discard. */
+				int bits = -precision;
+				while( max > 0 ) {
 					bits++;
-					variance >>= 1;
+					max >>= 1;
 				}
-				if( bits > precision ) {
+				if( bits > 0 ) {
 					/* Quantize and round. */
 					for( int idx = offset, endIdx = offset + samples; idx < endIdx; idx++ ) {
-						int amp = ( outputBuf[ idx * channels + channel ] + 32768 ) >> ( bits - precision - 1 );
+						int amp = ( outputBuf[ idx * channels + channel ] + 32768 ) >> ( bits - 1 );
 						amp = ( amp >> 1 ) + ( amp & 1 );
-						outputBuf[ idx * channels + channel ] = ( short ) ( ( amp << ( bits - precision ) ) - 32768 );
+						outputBuf[ idx * channels + channel ] = ( short ) ( ( amp << bits ) - 32768 );
 					}
 				}
 			}
