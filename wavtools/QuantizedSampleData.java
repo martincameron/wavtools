@@ -12,10 +12,11 @@ import java.io.IOException;
 	the file-size by as much as half without significant loss of quality.
 */
 public class QuantizedSampleData implements SampleData {
-	private static final String VERSION = "20210404 (c) mumart@gmail.com";
+	private static final String VERSION = "20210408 (c) mumart@gmail.com";
 
 	private SampleData input;
 	private int precision;
+	private int[] unpredictability;
 
 	/* Precision specified in bits per sample in the range 3 to 15. */
 	public QuantizedSampleData( SampleData sampleData, int precision ) {
@@ -24,6 +25,7 @@ public class QuantizedSampleData implements SampleData {
 		}
 		input = sampleData;
 		this.precision = precision;
+		unpredictability = new int[ getNumChannels() ];
 	}
 
 	public QuantizedSampleData( SampleData sampleData ) {
@@ -52,28 +54,38 @@ public class QuantizedSampleData implements SampleData {
 			int samples = input.getSamples( outputBuf, offset, 64 );
 			for( int channel = 0, channels = input.getNumChannels(); channel < channels; channel++ ) {
 				/* Estimate the unpredictability of the signal. */
-				int max = 0;
+				int up = 0;
 				for( int idx = offset + 1, endIdx = offset + samples; idx < endIdx; idx++ ) {
 					int da = outputBuf[ idx * channels + channel ] - outputBuf[ ( idx - 1 ) * channels + channel ];
 					if( da < 0 ) {
 						da = -da;
 					}
-					if( da > max ) {
-						max = da;
+					if( da > up ) {
+						up = da;
 					}
+				}
+				/* Use the minimum unpredictability of the current and previous chunk. */
+				int prev = unpredictability[ channel ];
+				unpredictability[ channel ] = up;
+				if( prev < up ) {
+					up = prev;
 				}
 				/* Determine the number of bits to discard. */
 				int bits = -precision;
-				while( max > 0 ) {
+				while( up > 0 ) {
 					bits++;
-					max >>= 1;
+					up >>= 1;
 				}
 				if( bits > 0 ) {
 					/* Quantize and round. */
 					for( int idx = offset, endIdx = offset + samples; idx < endIdx; idx++ ) {
 						int amp = ( outputBuf[ idx * channels + channel ] + 32768 ) >> ( bits - 1 );
 						amp = ( amp >> 1 ) + ( amp & 1 );
-						outputBuf[ idx * channels + channel ] = ( short ) ( ( amp << bits ) - 32768 );
+						amp = ( amp << bits ) - 32768;
+						if( amp > 32767 ) {
+							amp = 32767;
+						}
+						outputBuf[ idx * channels + channel ] = ( short ) amp;
 					}
 				}
 			}
