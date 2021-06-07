@@ -3,19 +3,17 @@ package wavtools;
 
 /**
 	An analogue-style noise-reduction algorithm based on DNR,
-	using a variable 12db/octave low-pass filter.
+	using a variable 6db/octave low-pass filter.
 */
 public class NoiseReduction implements SampleData {
-	private static final float FC_MIN_HZ = 500;
+	private static final float FC_MIN_HZ = 5;
 	private static final float FC_MAX = ( float ) ( 2.0 * Math.PI );
 	private static final float ATTACK_MS_PER_OCTAVE = 0.5f;
 	private static final float RELEASE_MS_PER_OCTAVE = 50f;
 
 	private SampleData input;
 
-	private float[] lpY0, lpY1;
-	
-	private float floor, attack, release, fcMin, fc, hpX, hpY;
+	private float floor, attack, release, fcMin, fc, hpX, hpY, lpY[];
 
 	/**
 		Constructor.
@@ -24,8 +22,7 @@ public class NoiseReduction implements SampleData {
 	*/
 	public NoiseReduction( SampleData input, int dynamicRange ) {
 		this.input = input;
-		lpY0 = new float[ input.getNumChannels() ];
-		lpY1 = new float[ input.getNumChannels() ];
+		lpY = new float[ input.getNumChannels() ];
 		floor = ( float ) ( 32768 * Math.pow( 10, dynamicRange / -20.0 ) * input.getNumChannels() );
 		attack = ( float ) Math.pow( 2, 1000 / ( input.getSampleRate() * ATTACK_MS_PER_OCTAVE ) );
 		release = ( float ) Math.pow( 2, -1000 / ( input.getSampleRate() * RELEASE_MS_PER_OCTAVE ) );
@@ -52,10 +49,9 @@ public class NoiseReduction implements SampleData {
 			float ctrl = 0, alpha = ( float ) ( fc / ( fc + 1 ) );
 			for( int chn = 0; chn < numChannels; chn++ ) {
 				int idx = offset * numChannels + chn;
-				lpY0[ chn ] += alpha * ( buffer[ idx ] - lpY0[ chn ] );
-				lpY1[ chn ] += alpha * ( lpY0[ chn ] - lpY1[ chn ] );
+				lpY[ chn ] += alpha * ( buffer[ idx ] - lpY[ chn ] );
 				ctrl += buffer[ idx ];
-				float out = lpY1[ chn ];
+				float out = lpY[ chn ];
 				if( out > 32767 ) {
 					buffer[ idx ] = 32767;
 				} else if( out < -32768 ) {
@@ -64,7 +60,7 @@ public class NoiseReduction implements SampleData {
 					buffer[ idx ] = ( short ) out;
 				}
 			}
-			hpY = ( hpY + ctrl - hpX ) / ( fc * 0.5f + 1 );
+			hpY = ( hpY + ctrl - hpX ) / ( fc + 1 );
 			hpX = ctrl;
 			if( hpY > floor || -hpY > floor ) {
 				fc *= attack;
