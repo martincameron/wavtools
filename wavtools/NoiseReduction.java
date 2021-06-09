@@ -6,7 +6,7 @@ package wavtools;
 	using a variable 6db/octave low-pass filter.
 */
 public class NoiseReduction implements SampleData {
-	private static final float FC_MIN_HZ = 5;
+	private static final float FC_MIN_HZ = 50;
 	private static final float FC_MAX = ( float ) ( 2.0 * Math.PI );
 	private static final float ATTACK_MS_PER_OCTAVE = 0.5f;
 	private static final float RELEASE_MS_PER_OCTAVE = 50f;
