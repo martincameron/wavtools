@@ -1,6 +1,9 @@
 
 package wavtools;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
@@ -179,5 +182,30 @@ public class WavSampleData implements SampleData {
 			inputRead = input.read( inputBuf, inputIdx, inputBytes - inputIdx );
 		}
 		return inputIdx;
+	}
+	
+	public static void main( String[] args ) throws Exception {
+		if( args.length != 4 ) {
+			System.err.println( "Wave cropping tool.\nUsage: " + WavSampleData.class.getName() + " input.wav offset length output.wav");
+			System.exit( 0 );
+		}
+		File inputFile = new File( args[ 0 ] );
+		int offset = Integer.parseInt( args[ 1 ] );
+		int length = Integer.parseInt( args[ 2 ] );
+		File outputFile = new File( args[ 3 ] );
+		ArraySampleData arraySampleData;
+		try( InputStream inputStream = new FileInputStream( inputFile ) ) {
+			arraySampleData = new ArraySampleData( new WavSampleData( inputStream ) );
+		}
+		if( length < 1 || offset + length > arraySampleData.getSamplesRemaining() ) {
+			length = arraySampleData.getSamplesRemaining() - offset;
+		}
+		int numChannels = arraySampleData.getNumChannels();
+		short[] array = new short[ length * numChannels ];
+		System.arraycopy( arraySampleData.getArray(), offset * numChannels, array, 0, length * numChannels );
+		arraySampleData = new ArraySampleData( array, numChannels, arraySampleData.getSampleRate(), length );
+		try( OutputStream outputStream = new FileOutputStream( outputFile ) ) {
+			writeWav( arraySampleData, outputStream );
+		}
 	}
 }

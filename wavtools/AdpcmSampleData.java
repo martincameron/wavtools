@@ -7,19 +7,21 @@ import java.io.IOException;
 
 /* IMA-style 4-bit ADPCM Codec. */
 public class AdpcmSampleData implements SampleData {
-	private static final String VERSION = "20210330 (c) mumart@gmail.com";
+	private static final String VERSION = "20241129 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 	private static final int FP_SHIFT = 8, FP_ONE = 1 << FP_SHIFT;
+	
+	private static final int MIN_STEP = FP_ONE >> 1;
+	private static final int MAX_STEP = FP_ONE << 12;
 
 	private static final int[] STEP = {
-		384, 352, 320, 288, 224, 224, 224, 224,
-		224, 224, 224, 224, 288, 320, 352, 384
+		416,  304,  288,  272,  248,  240,  238,  240,  240,  238,  240,  248,  272,  288,  304,  416
 	};
 
 	private static final int[] BIAS = {
 		// Used to bias the prediction based on the previous encoded value.
-		-7,-6,-5,-4,-3,-2,-1,0,0,1,2,3,4,5,6,7
+		-8,-5,-4,-3,-3,-2,-1, 0, 0, 1, 2, 3, 3, 4, 5, 8
 	};
 
 	private byte[] inputBuf;
@@ -46,7 +48,8 @@ public class AdpcmSampleData implements SampleData {
 				int bufferIdx = channel;
 				int bufferEnd = count * numChannels + channel;
 				while( bufferIdx < bufferEnd ) {
-					if( step < FP_ONE ) step = FP_ONE;
+					if( step < MIN_STEP ) step = MIN_STEP;
+					if( step > MAX_STEP ) step = MAX_STEP;
 					int delta = ( inputBuf[ bufferIdx ] << FP_SHIFT ) - pred;
 					int code = ( 2 * delta + 15 * step ) / step;
 					code = ( code & 1 ) + ( code >> 1 );
@@ -118,7 +121,8 @@ public class AdpcmSampleData implements SampleData {
 			int bufferIdx = offset * numChannels + channel;
 			int bufferEnd = ( offset + count ) * numChannels + channel;
 			while( bufferIdx < bufferEnd ) {
-				if( step < FP_ONE ) step = FP_ONE;
+				if( step < MIN_STEP ) step = MIN_STEP;
+				if( step > MAX_STEP ) step = MAX_STEP;
 				int code = outputBuf[ bufferIdx ];
 				pred = pred + ( ( ( ( code << 1 ) - 15 ) * step ) >> 1 );
 				int out = pred >> FP_SHIFT;

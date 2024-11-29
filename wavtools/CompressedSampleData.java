@@ -16,13 +16,23 @@ public class CompressedSampleData implements SampleData {
 	private InputStream inputStream;
 	private int numChannels, sampleRate, samplesRemaining;
 
-	private static int cbrt( int x ) {
+	public static int cbrt( int x ) {
 		// Approximate cube-root of x. Halley's Method.
 		int y = ( x >> 31 ) ^ 0xF;
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
+		return y;
+	}
+	
+	public static int sqrt( int x ) {
+		// Approximate square-root of x.
+		int y = x + 1;
+		for( int n = 0; n < 10; n++ ) {
+			y = ( y + x / y );
+			y = ( y >> 1 ) + ( y & 1 );
+		}
 		return y;
 	}
 
@@ -43,7 +53,7 @@ public class CompressedSampleData implements SampleData {
 					int in = cbrt( ( inputBuf[ bufferIdx ] - out ) << 5 );
 					outputBuf[ bufferIdx ] = ( byte ) in;
 					out += ( in * in * in ) >> 5;
-					bufferIdx += numChannels;					
+					bufferIdx += numChannels;
 				}
 				channelState[ channel ] = out;
 			}

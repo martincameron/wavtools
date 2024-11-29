@@ -23,6 +23,10 @@ public class ArraySampleData implements SampleData {
 			offset += sampleData.getSamples( inputBuf, offset, numSamples - offset );
 		}
 	}
+	
+	public void setOffset( int offset ) {
+		inputOffset = offset;
+	}
 
 	public short[] getArray() {
 		return inputBuf;
