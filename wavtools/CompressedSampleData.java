@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /* 8-Bit Differential Companding Codec. */
 public class CompressedSampleData implements SampleData {
-	private static final String VERSION = "20140129 (c) mumart@gmail.com";
+	private static final String VERSION = "20241202 (c) mumart@gmail.com";
 
 	private static final int BUF_SAMPLES = 1 << 16;
 
@@ -23,16 +23,6 @@ public class CompressedSampleData implements SampleData {
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
 		y = y * ( y * y * y + x + x ) / ( 2 * y * y * y + x );
-		return y;
-	}
-	
-	public static int sqrt( int x ) {
-		// Approximate square-root of x.
-		int y = x + 1;
-		for( int n = 0; n < 10; n++ ) {
-			y = ( y + x / y );
-			y = ( y >> 1 ) + ( y & 1 );
-		}
 		return y;
 	}
 
@@ -100,7 +90,13 @@ public class CompressedSampleData implements SampleData {
 			while( inputIdx < inputEnd ) {
 				int in = inputBuf[ inputIdx ];
 				out += ( in * in * in ) >> 5;
-				outputBuf[ outputIdx ] = ( short ) out;
+				if( out < -32768 ) {
+					outputBuf[ outputIdx ] = -32768;
+				} else if( out > 32767 ) {
+					outputBuf[ outputIdx ] = 32767;
+				} else {
+					outputBuf[ outputIdx ] = ( short ) out;
+				}
 				outputIdx += numChannels;
 				inputIdx += numChannels;
 			}
